@@ -29,8 +29,8 @@ body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica
 .progress::after{content:"";position:absolute;right:0;top:50%;transform:translate(50%,-50%);width:14px;height:14px;background:#fff;border-radius:50%;box-shadow:0 6px 16px rgba(0,0,0,0.45)}
 .equalizer-wrap{display:none}
 .right{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
-.logo{width:80px;opacity:0.95}
-.card-logo{position:absolute;right:20px;top:18px}
+.card-logo{position:absolute;right:18px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;padding:6px}
+.logo{width:auto;height:44px;max-width:120px;max-height:44px;object-fit:contain;display:block;opacity:1}
 .live-badge{background:rgba(255,80,80,0.95);color:white;padding:6px 10px;border-radius:999px;font-weight:700;font-size:12px;letter-spacing:0.6px}
 /* Play button */
 /* stream info */
@@ -41,4 +41,4 @@ body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica
 .marquee{animation:marquee 8s linear infinite}
 @keyframes marquee{0%{transform:translateX(0)}50%{transform:translateX(-40%)}100%{transform:translateX(0)}}
 /* Responsive */
-@media (max-width:700px){.card{width:92vw;padding:12px}.left{flex:0 0 84px}.cover-wrap{width:84px;height:84px}.logo{width:72px}}
+@media (max-width:700px){.card{width:92vw;padding:12px}.left{flex:0 0 84px}.cover-wrap{width:84px;height:84px}.logo{height:40px;max-height:40px}}
