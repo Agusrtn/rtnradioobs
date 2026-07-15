@@ -9,9 +9,14 @@
 <body>
   <div id="overlay" class="transparent">
     <div class="card">
+      <div class="card-logo">
+        <img src="assets/rtn-logo.svg" alt="RTN" class="logo">
+      </div>
       <div class="left">
         <div class="cover-wrap">
-          <img id="cover" src="assets/fallback-cover.svg" alt="cover" crossorigin="anonymous">
+          <div class="cover-frame">
+            <img id="cover" src="assets/fallback-cover.svg" alt="cover" crossorigin="anonymous">
+          </div>
           <div id="cover-glow" class="cover-glow"></div>
         </div>
       </div>
@@ -34,19 +39,9 @@
             <div id="remaining" class="time">-0:00</div>
           </div>
         </div>
-        <div class="equalizer-wrap">
-          <!-- simple svg equalizer -->
-          <svg id="equalizer" viewBox="0 0 120 40" preserveAspectRatio="none" class="equalizer">
-            <rect class="bar b1" x="8" y="10" width="10" height="20" rx="2" />
-            <rect class="bar b2" x="30" y="6" width="10" height="24" rx="2" />
-            <rect class="bar b3" x="52" y="2" width="10" height="28" rx="2" />
-            <rect class="bar b4" x="74" y="6" width="10" height="24" rx="2" />
-            <rect class="bar b5" x="96" y="10" width="10" height="20" rx="2" />
-          </svg>
-        </div>
+        <!-- equalizer removed for clean Spotify-like layout -->
       </div>
       <div class="right">
-        <img src="assets/rtn-logo.svg" alt="RTN" class="logo">
         <div id="live-badge" class="live-badge">EN DIRECTO</div>
       </div>
       </div>
