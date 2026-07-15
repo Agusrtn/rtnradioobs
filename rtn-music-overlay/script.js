@@ -2,6 +2,7 @@
   const API_DEFAULT = 'https://rtn-music.vercel.app/api/radio-stream?format=json';
   const params = new URLSearchParams(location.search);
   const API = params.get('api') || API_DEFAULT;
+  const STREAM_URL = params.get('stream') || null;
 
   const coverEl = document.getElementById('cover');
   const titleEl = document.getElementById('title');
@@ -12,6 +13,8 @@
   const overlay = document.getElementById('overlay');
   const coverGlow = document.getElementById('cover-glow');
   const equalizer = document.getElementById('equalizer');
+  const playBtn = document.getElementById('play-btn');
+  const player = document.getElementById('player');
 
   let state = {
     songId: null,
@@ -150,11 +153,48 @@
       if (!res.ok) throw new Error('bad');
       const data = await res.json();
       await applySong(data);
+      // If API returns a stream URL use it; otherwise use configured STREAM_URL
+      const apiStream = data && data.currentSong && data.currentSong.streamUrl;
+      const streamToUse = apiStream || STREAM_URL;
+      if (streamToUse && player.src !== streamToUse){
+        player.src = streamToUse;
+        player.preload = 'auto';
+        // try autoplay; if blocked, show play button
+        tryAutoPlay();
+      }
     }catch(e){
       // ignore and keep previous, optionally show fallback text
       console.warn('API fetch failed',e);
     }
   }
+
+  async function tryAutoPlay(){
+    if (!player.src) return;
+    try{
+      await player.play();
+      playBtn.classList.add('playing');
+      playBtn.setAttribute('aria-label','Pause');
+    }catch(e){
+      // Autoplay blocked; show play button for manual start
+      playBtn.classList.remove('playing');
+      playBtn.setAttribute('aria-label','Play');
+    }
+  }
+
+  // Play button toggle
+  playBtn.addEventListener('click', async ()=>{
+    if (!player.src){
+      // try to set from STREAM_URL or API
+      if (STREAM_URL) player.src = STREAM_URL;
+      else return;
+    }
+    if (player.paused){
+      try{ await player.play(); playBtn.classList.add('playing'); playBtn.setAttribute('aria-label','Pause'); }
+      catch(e){ console.warn('play failed',e); }
+    }else{
+      player.pause(); playBtn.classList.remove('playing'); playBtn.setAttribute('aria-label','Play');
+    }
+  });
 
   // startup
   (function start(){

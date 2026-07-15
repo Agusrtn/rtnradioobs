@@ -28,6 +28,10 @@ body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica
 .right{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
 .logo{width:96px;opacity:0.95}
 .live-badge{background:rgba(255,80,80,0.95);color:white;padding:6px 10px;border-radius:999px;font-weight:700;font-size:12px;letter-spacing:0.6px}
+/* Play button */
+.play-btn{background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.18));border:0;padding:10px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.35)}
+.play-btn svg{display:block}
+.play-btn.playing{background:linear-gradient(90deg, #3ddc84, #1fbf6b)}
 /* Animations */
 .song-change .cover-zoom{transform:scale(1.06)}
 .song-fade-out{opacity:0;transform:translateY(6px)}
