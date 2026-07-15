@@ -1,0 +1,169 @@
+(function(){
+  const API_DEFAULT = 'https://rtn-music.vercel.app/api/radio-stream?format=json';
+  const params = new URLSearchParams(location.search);
+  const API = params.get('api') || API_DEFAULT;
+
+  const coverEl = document.getElementById('cover');
+  const titleEl = document.getElementById('title');
+  const artistEl = document.getElementById('artist');
+  const progressEl = document.getElementById('progress');
+  const elapsedEl = document.getElementById('elapsed');
+  const remainingEl = document.getElementById('remaining');
+  const overlay = document.getElementById('overlay');
+  const coverGlow = document.getElementById('cover-glow');
+  const equalizer = document.getElementById('equalizer');
+
+  let state = {
+    songId: null,
+    title: '',
+    artist: '',
+    coverUrl: '',
+    elapsed: 0,
+    duration: 1,
+    lastFetch: 0,
+    lastServerElapsed: 0
+  };
+
+  // utility
+  function fmt(s){
+    if (!isFinite(s) || s<0) s=0;
+    const m = Math.floor(s/60);
+    const sec = Math.floor(s%60).toString().padStart(2,'0');
+    return `${m}:${sec}`;
+  }
+
+  // Smooth 60 FPS progress using rAF
+  let rafId=null;
+  function animateProgress(){
+    const now = performance.now()/1000;
+    const since = now - state.lastFetch; // seconds since last fetch
+    const elapsed = state.lastServerElapsed + since;
+    const pct = Math.min(1, elapsed / Math.max(1, state.duration));
+    progressEl.style.width = `${(pct*100).toFixed(3)}%`;
+    elapsedEl.textContent = fmt(elapsed);
+    remainingEl.textContent = `-${fmt(Math.max(0, state.duration - elapsed))}`;
+    rafId = requestAnimationFrame(animateProgress);
+  }
+
+  function pickDominantColor(img){
+    return new Promise((resolve)=>{
+      try{
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const w=40,h=40;canvas.width=w;canvas.height=h;
+        ctx.drawImage(img,0,0,w,h);
+        const data = ctx.getImageData(0,0,w,h).data;
+        let r=0,g=0,b=0,count=0;
+        for(let i=0;i<data.length;i+=4){
+          const a = data[i+3];
+          if (a<128) continue;
+          r+=data[i];g+=data[i+1];b+=data[i+2];count++;
+        }
+        if (!count) return resolve('#7b61ff');
+        r=Math.floor(r/count);g=Math.floor(g/count);b=Math.floor(b/count);
+        resolve(`rgb(${r},${g},${b})`);
+      }catch(e){resolve('#7b61ff')}
+    });
+  }
+
+  // load image with CORS handling
+  function loadImage(url){
+    return new Promise((resolve,reject)=>{
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = ()=> resolve(img);
+      img.onerror = ()=> reject(new Error('image load error'));
+      img.src = url;
+    });
+  }
+
+  let lastSongKey = '';
+  async function applySong(data){
+    if (!data || !data.currentSong) return;
+    const s = data.currentSong;
+    const newKey = `${s.title}:::${s.artist}:::${s.coverUrl}`;
+    const isChange = newKey !== lastSongKey;
+
+    state.lastServerElapsed = Number(data.currentSongElapsedSeconds || 0);
+    state.duration = Number(data.currentSongDuration) || 1;
+    state.lastFetch = performance.now()/1000;
+
+    if (isChange){
+      lastSongKey = newKey;
+      // animate out
+      titleEl.classList.add('song-fade-out');
+      artistEl.classList.add('song-fade-out');
+      coverEl.style.transition = 'transform 500ms ease, opacity 320ms ease';
+      coverEl.style.opacity = '0.6';
+
+      setTimeout(async ()=>{
+        titleEl.textContent = s.title || 'RTN MUSIC';
+        artistEl.textContent = s.artist || 'RTN RADIO';
+        // load cover
+        try{
+          const img = await loadImage(s.coverUrl || 'assets/fallback-cover.svg');
+          coverEl.src = s.coverUrl || 'assets/fallback-cover.svg';
+          const color = await pickDominantColor(img);
+          document.documentElement.style.setProperty('--accent', color);
+          coverGlow.style.boxShadow = `0 12px 40px ${color}`;
+        }catch(e){
+          // fallback
+          coverEl.src = 'assets/fallback-cover.svg';
+          document.documentElement.style.setProperty('--accent','#7b61ff');
+          coverGlow.style.boxShadow = '';
+        }
+
+        // small zoom
+        coverEl.style.transform = 'scale(1.06)';
+        setTimeout(()=>{coverEl.style.opacity='1';coverEl.style.transform='scale(1)';},420);
+
+        titleEl.classList.remove('song-fade-out');
+        artistEl.classList.remove('song-fade-out');
+
+        // marquee if text overflow
+        requestAnimationFrame(()=>{
+          if (titleEl.scrollWidth > titleEl.clientWidth) titleEl.classList.add('marquee'); else titleEl.classList.remove('marquee');
+          if (artistEl.scrollWidth > artistEl.clientWidth) artistEl.classList.add('marquee'); else artistEl.classList.remove('marquee');
+        });
+
+        // pulse equalizer
+        pulseEqualizer();
+      },160);
+    }
+  }
+
+  function pulseEqualizer(){
+    const bars = equalizer.querySelectorAll('.bar');
+    bars.forEach((b,i)=>{
+      b.animate([
+        {transform:`scaleY(${0.2 + Math.random()*0.5})`},
+        {transform:`scaleY(${0.8 + Math.random()*1.0})`}
+      ],{duration:300 + i*80,iterations:5 + Math.floor(Math.random()*6),direction:'alternate'});
+    });
+  }
+
+  // Polling loop
+  let pollTimer=null;
+  async function poll(){
+    try{
+      const res = await fetch(API,{cache:'no-store'});
+      if (!res.ok) throw new Error('bad');
+      const data = await res.json();
+      await applySong(data);
+    }catch(e){
+      // ignore and keep previous, optionally show fallback text
+      console.warn('API fetch failed',e);
+    }
+  }
+
+  // startup
+  (function start(){
+    poll();
+    pollTimer = setInterval(poll, 1000);
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(animateProgress);
+  })();
+
+  // Expose for debug
+  window._rtn = {state, poll};
+})();
