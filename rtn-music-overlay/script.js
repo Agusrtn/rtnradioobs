@@ -16,6 +16,7 @@
   const equalizer = document.getElementById('equalizer');
   const player = document.getElementById('player');
   const streamLink = document.getElementById('stream-link');
+  const streamStatus = document.getElementById('stream-status');
 
   let state = {
     songId: null,
@@ -75,6 +76,13 @@
         resolve(`rgb(${r},${g},${b})`);
       }catch(e){resolve('#7b61ff')}
     });
+  }
+
+  function setStreamStatus(state, text){
+    if (!streamStatus) return;
+    streamStatus.className = 'stream-status';
+    if (state) streamStatus.classList.add(state);
+    streamStatus.textContent = 'Estado: ' + (text || state || '—');
   }
 
   // load image with CORS handling
@@ -177,25 +185,30 @@
       await applySong(data);
       // If API returns a stream URL use it; otherwise use configured STREAM_URL
       const apiStream = data && data.currentSong && data.currentSong.streamUrl;
+      const apiTopStream = data && data.streamUrl;
       const streamToUse = apiStream || STREAM_URL;
-      if (streamToUse && player.src !== streamToUse){
-        player.src = streamToUse;
+      const finalStream = apiTopStream || streamToUse;
+      if (finalStream && player.src !== finalStream){
+        player.src = finalStream;
         player.preload = 'auto';
         // update UI with stream URL
         if (streamLink){
-          streamLink.href = streamToUse;
-          streamLink.textContent = streamToUse;
+          streamLink.href = finalStream;
+          streamLink.textContent = finalStream;
         }
+        setStreamStatus('connecting','Conectando...');
         // try autoplay; if blocked we won't show any play button (overlay is silent until user/OBS allows playback)
         tryAutoPlay();
-      } else if (!streamToUse && streamLink){
+      } else if (!finalStream && streamLink){
         streamLink.href = '#'; streamLink.textContent = '—';
+        setStreamStatus(null,'No hay stream');
       }
       // try syncing player with server after updating state
       trySyncPlayerWithServer();
     }catch(e){
       // ignore and keep previous, optionally show fallback text
       console.warn('API fetch failed',e);
+      setStreamStatus('error','Error al consultar API');
     }
   }
 
@@ -204,8 +217,10 @@
     try{
       await player.play();
       // autoplay succeeded
+      setStreamStatus('playing','Reproduciendo');
     }catch(e){
       // Autoplay blocked; overlay stays muted until user allows playback in browser/OBS
+      setStreamStatus('connecting','Autoplay bloqueado');
     }
   }
 
@@ -219,6 +234,15 @@
     rafId = requestAnimationFrame(animateProgress);
     // Expose player globally for checks in animateProgress
     window.player = player;
+    // Player event listeners for status
+    player.addEventListener('waiting', ()=> setStreamStatus('buffering','Buffering'));
+    player.addEventListener('playing', ()=> setStreamStatus('playing','Reproduciendo'));
+    player.addEventListener('pause', ()=> setStreamStatus('connecting','Pausado'));
+    player.addEventListener('stalled', ()=> setStreamStatus('buffering','Stalled'));
+    player.addEventListener('error', (ev)=>{ setStreamStatus('error','Error de reproducción'); console.error('Audio error', ev); });
+    player.addEventListener('suspend', ()=> setStreamStatus('connecting','Suspendido'));
+    player.addEventListener('canplay', ()=> setStreamStatus('connecting','Listo'));
+    player.addEventListener('canplaythrough', ()=> setStreamStatus('playing','Listo para reproducir'));
     // Sync on metadata load
     player.addEventListener('loadedmetadata', ()=>{
       trySyncPlayerWithServer();
