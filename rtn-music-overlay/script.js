@@ -14,8 +14,8 @@
   const overlay = document.getElementById('overlay');
   const coverGlow = document.getElementById('cover-glow');
   const equalizer = document.getElementById('equalizer');
-  const playBtn = document.getElementById('play-btn');
   const player = document.getElementById('player');
+  const streamLink = document.getElementById('stream-link');
 
   let state = {
     songId: null,
@@ -181,8 +181,15 @@
       if (streamToUse && player.src !== streamToUse){
         player.src = streamToUse;
         player.preload = 'auto';
-        // try autoplay; if blocked, show play button
+        // update UI with stream URL
+        if (streamLink){
+          streamLink.href = streamToUse;
+          streamLink.textContent = streamToUse;
+        }
+        // try autoplay; if blocked we won't show any play button (overlay is silent until user/OBS allows playback)
         tryAutoPlay();
+      } else if (!streamToUse && streamLink){
+        streamLink.href = '#'; streamLink.textContent = '—';
       }
       // try syncing player with server after updating state
       trySyncPlayerWithServer();
@@ -196,29 +203,13 @@
     if (!player.src) return;
     try{
       await player.play();
-      playBtn.classList.add('playing');
-      playBtn.setAttribute('aria-label','Pause');
+      // autoplay succeeded
     }catch(e){
-      // Autoplay blocked; show play button for manual start
-      playBtn.classList.remove('playing');
-      playBtn.setAttribute('aria-label','Play');
+      // Autoplay blocked; overlay stays muted until user allows playback in browser/OBS
     }
   }
 
-  // Play button toggle
-  playBtn.addEventListener('click', async ()=>{
-    if (!player.src){
-      // try to set from STREAM_URL or API
-      if (STREAM_URL) player.src = STREAM_URL;
-      else return;
-    }
-    if (player.paused){
-      try{ await player.play(); playBtn.classList.add('playing'); playBtn.setAttribute('aria-label','Pause'); }
-      catch(e){ console.warn('play failed',e); }
-    }else{
-      player.pause(); playBtn.classList.remove('playing'); playBtn.setAttribute('aria-label','Play');
-    }
-  });
+  // no manual play/pause button in overlay; playback is handled automatically
 
   // startup
   (function start(){
