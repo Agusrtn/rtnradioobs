@@ -1,5 +1,6 @@
 (function(){
-  const API_DEFAULT = 'https://rtn-music.vercel.app/api/radio-stream?format=json';
+  // Use local proxy API so we avoid CORS when deployed on Vercel
+  const API_DEFAULT = '/api/radio-stream?format=json';
   const params = new URLSearchParams(location.search);
   const API = params.get('api') || API_DEFAULT;
   const STREAM_URL = params.get('stream') || null;
