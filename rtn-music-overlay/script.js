@@ -8,7 +8,7 @@
   const coverEl = document.getElementById('cover');
   const titleEl = document.getElementById('title');
   const artistEl = document.getElementById('artist');
-  const elapsedBigEl = document.getElementById('elapsed-big');
+  // big elapsed removed per UI simplification
   const progressEl = document.getElementById('progress');
   const elapsedEl = document.getElementById('elapsed');
   const remainingEl = document.getElementById('remaining');
@@ -52,7 +52,7 @@
     progressEl.style.width = `${(pct*100).toFixed(3)}%`;
     elapsedEl.textContent = fmt(elapsed);
     remainingEl.textContent = `-${fmt(Math.max(0, state.duration - elapsed))}`;
-    if (elapsedBigEl) elapsedBigEl.textContent = fmt(elapsed);
+    // large time removed; small elapsed at bottom is updated below
     rafId = requestAnimationFrame(animateProgress);
   }
 
@@ -140,8 +140,7 @@
 
         // pulse equalizer
         pulseEqualizer();
-        // update big elapsed immediately
-        if (elapsedBigEl) elapsedBigEl.textContent = fmt(state.lastServerElapsed);
+        // big elapsed removed
       },160);
     }
   }
@@ -221,11 +220,8 @@
     player.addEventListener('loadedmetadata', ()=>{
       trySyncPlayerWithServer();
     });
-    // Keep UI updated from player time while playing
-    player.addEventListener('timeupdate', ()=>{
-      // animateProgress already updates via rAF, but we ensure big time updates
-      if (elapsedBigEl) elapsedBigEl.textContent = fmt(player.currentTime || 0);
-    });
+    // Keep UI updated from player time while playing (small elapsed updated via rAF)
+    player.addEventListener('timeupdate', ()=>{});
   })();
 
   // Expose for debug
