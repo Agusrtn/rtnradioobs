@@ -1,0 +1,6 @@
+{
+  "routes": [
+    { "src": "^/$", "dest": "/rtn-music-overlay/index.html" },
+    { "src": "^/(.*)$", "dest": "/rtn-music-overlay/$1" }
+  ]
+}
