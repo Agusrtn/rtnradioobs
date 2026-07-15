@@ -7,6 +7,7 @@
   const coverEl = document.getElementById('cover');
   const titleEl = document.getElementById('title');
   const artistEl = document.getElementById('artist');
+  const elapsedBigEl = document.getElementById('elapsed-big');
   const progressEl = document.getElementById('progress');
   const elapsedEl = document.getElementById('elapsed');
   const remainingEl = document.getElementById('remaining');
@@ -38,13 +39,20 @@
   // Smooth 60 FPS progress using rAF
   let rafId=null;
   function animateProgress(){
+    let elapsed;
     const now = performance.now()/1000;
     const since = now - state.lastFetch; // seconds since last fetch
-    const elapsed = state.lastServerElapsed + since;
+    // if audio is playing prefer player.currentTime for accuracy
+    if (window.player && !window.player.paused && !isNaN(window.player.currentTime) && window.player.currentTime>0){
+      elapsed = window.player.currentTime;
+    } else {
+      elapsed = state.lastServerElapsed + since;
+    }
     const pct = Math.min(1, elapsed / Math.max(1, state.duration));
     progressEl.style.width = `${(pct*100).toFixed(3)}%`;
     elapsedEl.textContent = fmt(elapsed);
     remainingEl.textContent = `-${fmt(Math.max(0, state.duration - elapsed))}`;
+    if (elapsedBigEl) elapsedBigEl.textContent = fmt(elapsed);
     rafId = requestAnimationFrame(animateProgress);
   }
 
@@ -131,8 +139,22 @@
 
         // pulse equalizer
         pulseEqualizer();
+        // update big elapsed immediately
+        if (elapsedBigEl) elapsedBigEl.textContent = fmt(state.lastServerElapsed);
       },160);
     }
+  }
+
+  // Player sync: when stream is present, keep player time close to server elapsed
+  function trySyncPlayerWithServer(){
+    try{
+      const desired = Number(state.lastServerElapsed || 0);
+      if (!player || !player.src || isNaN(player.duration)) return;
+      // if difference greater than 1s, seek
+      if (Math.abs((player.currentTime||0) - desired) > 1.0){
+        player.currentTime = Math.max(0, Math.min(desired, player.duration || desired));
+      }
+    }catch(e){/* ignore */}
   }
 
   function pulseEqualizer(){
@@ -162,6 +184,8 @@
         // try autoplay; if blocked, show play button
         tryAutoPlay();
       }
+      // try syncing player with server after updating state
+      trySyncPlayerWithServer();
     }catch(e){
       // ignore and keep previous, optionally show fallback text
       console.warn('API fetch failed',e);
@@ -202,6 +226,17 @@
     pollTimer = setInterval(poll, 1000);
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(animateProgress);
+    // Expose player globally for checks in animateProgress
+    window.player = player;
+    // Sync on metadata load
+    player.addEventListener('loadedmetadata', ()=>{
+      trySyncPlayerWithServer();
+    });
+    // Keep UI updated from player time while playing
+    player.addEventListener('timeupdate', ()=>{
+      // animateProgress already updates via rAF, but we ensure big time updates
+      if (elapsedBigEl) elapsedBigEl.textContent = fmt(player.currentTime || 0);
+    });
   })();
 
   // Expose for debug
